@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Runbook Desk · SkyPil</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f3ee;color:#202e2b;font:16px/1.55 Inter,Arial,sans-serif}header{background:#183933;color:#fff;padding:17px max(6vw,24px);font-weight:650;display:flex;justify-content:space-between}header small{color:#bad5c9}main{max-width:960px;margin:8vh auto;padding:0 24px}h1{font:normal clamp(44px,7vw,78px)/1.03 Georgia,serif;letter-spacing:-.056em;margin:0}p{color:#4a615a}.grid{display:grid;grid-template-columns:2fr 1fr;gap:22px;align-items:start;margin-top:30px}section,aside{background:#fff;border:1px solid #cbd3c9;border-radius:12px;padding:22px}label,h2{font-size:16px;font-weight:700}textarea{resize:vertical;width:100%;font:inherit;padding:12px;border:1px solid #9aaea5;border-radius:6px;margin:8px 0}button{cursor:pointer;font:inherit;border-radius:6px;padding:9px 14px}form button{background:#175548;color:white;border:0}button:disabled{opacity:.6}aside button{display:block;text-align:left;border:0;border-bottom:1px solid #d5ded7;background:none;width:100%;color:#225448;padding:10px 0}h2{margin:0 0 10px}article{border-top:1px solid #d5ded7;margin-top:20px;padding-top:18px}output{display:block;white-space:pre-wrap}li{font-size:14px;margin:8px 0}small{font:13px/1.6 monospace}ul{padding-left:20px}@media(max-width:660px){.grid{grid-template-columns:1fr}main{margin:36px auto}}
+</style>
+<header><span>SkyPil / Operations</span><small id="mode"></small></header><main><h1>Runbook Desk</h1><p>Look up CSV requirements, investigate a demo job, or check whether a rerun is ready.</p>
+<div class="grid"><section><form><label for="q">Ask the assistant</label><textarea required maxlength="1200" id="q" rows="3" placeholder="Why did job 1042 fail?"></textarea><button id="submit">Ask question →</button></form><article hidden id="result" aria-live="polite"><h2>Answer</h2><output id="answer"></output><ul id="evidence"></ul><small id="trace"></small></article></section>
+<aside><h2>Try a question</h2><button>Which columns does account-status-update v2 require?</button><button>Why did job 1042 fail?</button><button>Can I rerun job 1043?</button><button>Is job 1044 ready?</button></aside></div></main>
+<script>
+const el=id=>document.getElementById(id);
+fetch('/health').then(r=>r.json()).then(d=>el('mode').textContent=d.mode==='guided'?'Guided demo':'Model agent');
+const form=document.querySelector('form');
+document.querySelectorAll('aside button').forEach(b=>b.onclick=()=>{if(el('submit').disabled)return;el('q').value=b.textContent;form.requestSubmit()});
+form.onsubmit=async event=>{
+ event.preventDefault();el('submit').disabled=true;el('result').hidden=false;el('answer').textContent='Looking up evidence…';el('evidence').replaceChildren();el('trace').textContent='';
+ try{const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:el('q').value})});if(!r.ok)throw new Error();const d=await r.json();el('answer').textContent=d.answer;
+ for(const e of d.evidence){const li=document.createElement('li');li.textContent=e.source+' — '+e.text;el('evidence').append(li)}
+ el('trace').textContent=d.trace.join(' → ')}catch{el('answer').textContent='Request failed. Check the service or model connection and try again.'}finally{el('submit').disabled=false}
+};
+</script></html>
